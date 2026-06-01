@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "tsx watch server/index.ts",
     "build": "vite build",
-    "preview": "vite preview",
-    "db:push": "node --loader tsx/esm server/db-migrate.ts"
+    "start": "npx tsx server/index.ts",
+    "preview": "vite preview"
   },
   "dependencies": {
     "discord.js": "^14.16.3",

@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: botforge
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: botforge-db
+          property: connectionString
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+
+databases:
+  - name: botforge-db
+    databaseName: botforge
+    user: botforge
+    region: singapore
+    plan: free
