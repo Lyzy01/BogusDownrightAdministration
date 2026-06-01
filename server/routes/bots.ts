@@ -175,7 +175,13 @@ router.get("/:id/invite", async (req: Request, res: Response) => {
     return acc | (PERMS[perm] || 0n);
   }, 0n);
 
-  const url = `https://discord.com/api/oauth2/authorize?client_id=${bot.bot_id}&permissions=${permBits.toString()}&scope=bot+applications.commands`;
+  const allowedScopes = ["bot", "applications.commands", "identify", "guilds", "guilds.join", "guilds.members.read", "email"];
+  const requestedScopes: string[] = typeof req.query.scopes === "string"
+    ? req.query.scopes.split(" ").filter((s) => allowedScopes.includes(s))
+    : ["bot", "applications.commands"];
+
+  const scope = requestedScopes.join("+");
+  const url = `https://discord.com/api/oauth2/authorize?client_id=${bot.bot_id}&permissions=${permBits.toString()}&scope=${scope}`;
   res.json({ url });
 });
 

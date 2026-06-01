@@ -64,6 +64,7 @@ export default function BotSetup() {
   const [inviteUrl, setInviteUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [guideOpen, setGuideOpen] = useState(true);
+  const [selectedScopes, setSelectedScopes] = useState<string[]>(["bot", "applications.commands"]);
 
   const { data: bot, isLoading } = useQuery<BotData>({
     queryKey: ["bot", id],
@@ -102,7 +103,8 @@ export default function BotSetup() {
   });
 
   async function generateInvite() {
-    const res = await fetch(`/api/bots/${id}/invite`, { credentials: "include" });
+    const scopes = selectedScopes.join(" ");
+    const res = await fetch(`/api/bots/${id}/invite?scopes=${encodeURIComponent(scopes)}`, { credentials: "include" });
     if (res.ok) {
       const { url } = await res.json();
       setInviteUrl(url);
@@ -298,7 +300,55 @@ export default function BotSetup() {
               <ExternalLink size={16} className="text-discord-green" />
               <h2 className="font-bold text-white">Invite URL</h2>
             </div>
-            <p className="text-discord-light text-sm mb-3">Generate a link to add your bot to servers</p>
+            <p className="text-discord-light text-sm mb-3">Select OAuth2 scopes then generate a link to add your bot to servers</p>
+
+            <div className="mb-4">
+              <p className="text-xs text-discord-light/50 font-semibold uppercase tracking-wide mb-2">OAuth2 Scopes</p>
+              <div className="space-y-1.5">
+                {[
+                  { scope: "bot", label: "bot", desc: "Add the bot to a server", required: true },
+                  { scope: "applications.commands", label: "applications.commands", desc: "Enable slash commands", recommended: true },
+                  { scope: "identify", label: "identify", desc: "Read basic user info" },
+                  { scope: "guilds", label: "guilds", desc: "See which servers user is in" },
+                  { scope: "guilds.members.read", label: "guilds.members.read", desc: "Read guild member info" },
+                  { scope: "email", label: "email", desc: "Access user email address" },
+                ].map(({ scope, label, desc, required, recommended }) => {
+                  const active = selectedScopes.includes(scope);
+                  return (
+                    <label
+                      key={scope}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${
+                        active ? "bg-discord-green/10 border border-discord-green/25" : "bg-white/3 border border-white/5 hover:bg-white/5"
+                      } ${required ? "cursor-default" : ""}`}
+                      data-testid={`toggle-scope-${scope}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        disabled={required}
+                        onChange={() => {
+                          if (required) return;
+                          setSelectedScopes((prev) =>
+                            prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]
+                          );
+                          setInviteUrl("");
+                        }}
+                        className="w-3.5 h-3.5 accent-discord-green"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-mono font-semibold text-white">{label}</span>
+                          {required && <span className="text-xs px-1.5 py-0.5 rounded-full bg-discord-blurple/10 text-discord-blurple border border-discord-blurple/20">Required</span>}
+                          {recommended && !required && <span className="text-xs px-1.5 py-0.5 rounded-full bg-discord-green/10 text-discord-green border border-discord-green/20">Recommended</span>}
+                        </div>
+                        <p className="text-xs text-discord-light/50">{desc}</p>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
             {inviteUrl ? (
               <div className="space-y-2">
                 <div className="px-3 py-2 rounded-lg bg-discord-darkest border border-white/10 text-xs font-mono text-discord-light break-all">
@@ -312,6 +362,9 @@ export default function BotSetup() {
                   <a href={inviteUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-discord-light text-xs font-semibold transition-all">
                     <ExternalLink size={12} /> Open
                   </a>
+                  <button onClick={() => setInviteUrl("")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-discord-light text-xs font-semibold transition-all">
+                    Regenerate
+                  </button>
                 </div>
               </div>
             ) : (
