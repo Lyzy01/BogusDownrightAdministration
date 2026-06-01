@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import BotSetup from "./pages/BotSetup";
 import BotCommands from "./pages/BotCommands";
 import BotModules from "./pages/BotModules";
+import BotLogs from "./pages/BotLogs";
 import NotFound from "./pages/NotFound";
 
 export interface User {
@@ -37,6 +38,7 @@ export default function App() {
       <Route path="/bots/:id" component={BotSetup} />
       <Route path="/bots/:id/commands" component={BotCommands} />
       <Route path="/bots/:id/modules" component={BotModules} />
+      <Route path="/bots/:id/logs" component={BotLogs} />
       <Route component={NotFound} />
     </Switch>
   );

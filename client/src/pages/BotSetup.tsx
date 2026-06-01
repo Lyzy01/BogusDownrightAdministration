@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import {
   Bot, Save, ExternalLink, Copy, Check, Terminal, Puzzle, ChevronRight,
-  Info, Shield, Zap, Radio, Server, MessageSquare
+  Info, Shield, Zap, Radio, Server, MessageSquare, ScrollText
 } from "lucide-react";
 import Layout from "../components/Layout";
 import { useCurrentUser } from "../App";
@@ -166,6 +166,11 @@ export default function BotSetup() {
               <Link href={`/bots/${id}/commands`}>
                 <motion.div whileHover={{ scale: 1.03 }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl glass border border-white/10 text-discord-light hover:text-white text-sm cursor-pointer transition-all">
                   <Terminal size={15} /> Commands
+                </motion.div>
+              </Link>
+              <Link href={`/bots/${id}/logs`}>
+                <motion.div whileHover={{ scale: 1.03 }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl glass border border-white/10 text-discord-light hover:text-white text-sm cursor-pointer transition-all">
+                  <ScrollText size={15} /> Logs
                 </motion.div>
               </Link>
             </div>

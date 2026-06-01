@@ -183,4 +183,28 @@ router.get("/:id/intents", (_req: Request, res: Response) => {
   res.json(Object.keys(AVAILABLE_INTENTS));
 });
 
+router.get("/:id/logs", async (req: Request, res: Response) => {
+  const userId = (req.session as any).userId;
+  const existing = await query("SELECT id FROM bots WHERE id = $1 AND user_id = $2", [req.params.id, userId]);
+  if (existing.rows.length === 0) {
+    return res.status(404).json({ error: "Bot not found" });
+  }
+  const limit = Math.min(parseInt(String(req.query.limit ?? "100")), 200);
+  const result = await query(
+    "SELECT id, level, message, created_at FROM bot_logs WHERE bot_id = $1 ORDER BY created_at DESC LIMIT $2",
+    [req.params.id, limit]
+  );
+  res.json(result.rows.reverse());
+});
+
+router.delete("/:id/logs", async (req: Request, res: Response) => {
+  const userId = (req.session as any).userId;
+  const existing = await query("SELECT id FROM bots WHERE id = $1 AND user_id = $2", [req.params.id, userId]);
+  if (existing.rows.length === 0) {
+    return res.status(404).json({ error: "Bot not found" });
+  }
+  await query("DELETE FROM bot_logs WHERE bot_id = $1", [req.params.id]);
+  res.json({ success: true });
+});
+
 export default router;

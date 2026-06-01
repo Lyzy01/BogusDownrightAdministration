@@ -1,5 +1,19 @@
 import { Client, GatewayIntentBits, Events, Message } from "discord.js";
 import { query } from "./db.js";
+import { v4 as uuidv4 } from "uuid";
+
+async function addLog(botId: string, level: "info" | "warn" | "error", message: string) {
+  try {
+    await query(
+      "INSERT INTO bot_logs (id, bot_id, level, message) VALUES ($1, $2, $3, $4)",
+      [uuidv4(), botId, level, message]
+    );
+    await query(
+      "DELETE FROM bot_logs WHERE bot_id = $1 AND id NOT IN (SELECT id FROM bot_logs WHERE bot_id = $1 ORDER BY created_at DESC LIMIT 200)",
+      [botId]
+    );
+  } catch (_) {}
+}
 
 interface BotInstance {
   client: Client;
@@ -52,22 +66,20 @@ export async function startBot(botDbId: string): Promise<{ success: boolean; err
     intents: intentBits.length > 0 ? intentBits : [GatewayIntentBits.Guilds],
   });
 
+  await addLog(botDbId, "info", "Attempting to connect to Discord...");
+
   try {
     await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error("Login timeout")), 15000);
+      const timeout = setTimeout(() => reject(new Error("Login timeout after 15s — check your token and privileged intents")), 15000);
 
       client.once(Events.ClientReady, async (readyClient) => {
         clearTimeout(timeout);
         await query(
           "UPDATE bots SET status = $1, name = $2, avatar = $3, bot_id = $4, updated_at = NOW() WHERE id = $5",
-          [
-            "online",
-            readyClient.user.username,
-            readyClient.user.avatar,
-            readyClient.user.id,
-            botDbId,
-          ]
+          ["online", readyClient.user.username, readyClient.user.avatar, readyClient.user.id, botDbId]
         );
+        await addLog(botDbId, "info", `Connected as ${readyClient.user.username} (${readyClient.user.id})`);
+        await addLog(botDbId, "info", `Bot is online and ready to receive commands`);
         resolve();
       });
 
@@ -88,6 +100,7 @@ export async function startBot(botDbId: string): Promise<{ success: boolean; err
         if (cmdResult.rows.length > 0) {
           const cmd = cmdResult.rows[0];
           await message.reply(cmd.response || "Command executed!");
+          await addLog(botDbId, "info", `Command "${commandName}" executed by ${message.author.tag} in #${(message.channel as any).name ?? "DM"}`);
         }
 
         const modulesResult = await query(
@@ -103,6 +116,7 @@ export async function startBot(botDbId: string): Promise<{ success: boolean; err
             if (target) {
               await target.kick(args.slice(1).join(" ") || "No reason");
               await message.reply(`Kicked ${target.user.tag}`);
+              await addLog(botDbId, "warn", `Kicked ${target.user.tag} — requested by ${message.author.tag}`);
             }
           }
           if (commandName === "ban" && message.member?.permissions.has("BanMembers")) {
@@ -110,6 +124,7 @@ export async function startBot(botDbId: string): Promise<{ success: boolean; err
             if (target) {
               await target.ban({ reason: args.slice(1).join(" ") || "No reason" });
               await message.reply(`Banned ${target.user.tag}`);
+              await addLog(botDbId, "warn", `Banned ${target.user.tag} — requested by ${message.author.tag}`);
             }
           }
           if (commandName === "clear" && message.member?.permissions.has("ManageMessages")) {
@@ -117,20 +132,25 @@ export async function startBot(botDbId: string): Promise<{ success: boolean; err
             await message.channel.bulkDelete(Math.min(amount, 100));
             const msg = await message.channel.send(`Deleted ${amount} messages`);
             setTimeout(() => msg.delete(), 3000);
+            await addLog(botDbId, "warn", `Cleared ${amount} messages in #${(message.channel as any).name ?? "channel"} by ${message.author.tag}`);
           }
         }
 
         if (enabledModules.includes("fun")) {
           if (commandName === "ping") {
             await message.reply(`Pong! Latency: ${client.ws.ping}ms`);
+            await addLog(botDbId, "info", `Ping command — latency ${client.ws.ping}ms`);
           }
           if (commandName === "roll") {
             const sides = parseInt(args[0]) || 6;
             const result = Math.floor(Math.random() * sides) + 1;
             await message.reply(`You rolled a ${result} (d${sides})`);
+            await addLog(botDbId, "info", `Roll d${sides} by ${message.author.tag} — result: ${result}`);
           }
           if (commandName === "flip") {
-            await message.reply(Math.random() > 0.5 ? "Heads!" : "Tails!");
+            const result = Math.random() > 0.5 ? "Heads" : "Tails";
+            await message.reply(`${result}!`);
+            await addLog(botDbId, "info", `Coin flip by ${message.author.tag} — ${result}`);
           }
           if (commandName === "8ball") {
             const answers = [
@@ -140,7 +160,9 @@ export async function startBot(botDbId: string): Promise<{ success: boolean; err
               "Don't count on it.", "My reply is no.", "My sources say no.",
               "Outlook not so good.", "Very doubtful."
             ];
-            await message.reply(answers[Math.floor(Math.random() * answers.length)]);
+            const answer = answers[Math.floor(Math.random() * answers.length)];
+            await message.reply(answer);
+            await addLog(botDbId, "info", `8ball by ${message.author.tag} — "${answer}"`);
           }
         }
 
@@ -151,6 +173,7 @@ export async function startBot(botDbId: string): Promise<{ success: boolean; err
               await message.reply(
                 `**Server:** ${guild.name}\n**Members:** ${guild.memberCount}\n**Created:** ${guild.createdAt.toDateString()}`
               );
+              await addLog(botDbId, "info", `Serverinfo requested by ${message.author.tag} in ${guild.name}`);
             }
           }
           if (commandName === "userinfo") {
@@ -159,13 +182,23 @@ export async function startBot(botDbId: string): Promise<{ success: boolean; err
               await message.reply(
                 `**User:** ${target.user.tag}\n**Joined:** ${target.joinedAt?.toDateString()}\n**ID:** ${target.user.id}`
               );
+              await addLog(botDbId, "info", `Userinfo for ${target.user.tag} requested by ${message.author.tag}`);
             }
           }
           if (commandName === "avatar") {
             const target = message.mentions.users.first() || message.author;
             await message.reply(target.displayAvatarURL({ size: 512 }));
+            await addLog(botDbId, "info", `Avatar requested for ${target.tag} by ${message.author.tag}`);
           }
         }
+      });
+
+      client.on(Events.Error, async (error) => {
+        await addLog(botDbId, "error", `Discord client error: ${error.message}`);
+      });
+
+      client.on(Events.Warn, async (warning) => {
+        await addLog(botDbId, "warn", warning);
       });
 
       client.login(bot.token).catch(reject);
@@ -175,11 +208,10 @@ export async function startBot(botDbId: string): Promise<{ success: boolean; err
     return { success: true };
   } catch (error) {
     client.destroy();
-    await query("UPDATE bots SET status = $1, updated_at = NOW() WHERE id = $2", [
-      "error",
-      botDbId,
-    ]);
-    return { success: false, error: (error as Error).message };
+    const errMsg = (error as Error).message;
+    await query("UPDATE bots SET status = $1, updated_at = NOW() WHERE id = $2", ["error", botDbId]);
+    await addLog(botDbId, "error", `Failed to start: ${errMsg}`);
+    return { success: false, error: errMsg };
   }
 }
 
@@ -189,10 +221,8 @@ export async function stopBot(botDbId: string): Promise<void> {
     instance.client.destroy();
     activeBots.delete(botDbId);
   }
-  await query("UPDATE bots SET status = $1, updated_at = NOW() WHERE id = $2", [
-    "offline",
-    botDbId,
-  ]);
+  await query("UPDATE bots SET status = $1, updated_at = NOW() WHERE id = $2", ["offline", botDbId]);
+  await addLog(botDbId, "info", "Bot stopped and disconnected from Discord");
 }
 
 export function getBotStatus(botDbId: string): string {

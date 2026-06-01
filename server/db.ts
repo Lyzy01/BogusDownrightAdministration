@@ -96,6 +96,20 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_sessions_expire ON sessions (expire)
   `);
 
+  await query(`
+    CREATE TABLE IF NOT EXISTS bot_logs (
+      id VARCHAR(255) PRIMARY KEY,
+      bot_id VARCHAR(255) NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+      level VARCHAR(20) DEFAULT 'info',
+      message TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_bot_logs_bot_id ON bot_logs (bot_id, created_at DESC)
+  `);
+
   console.log("Database initialized successfully");
 }
 
