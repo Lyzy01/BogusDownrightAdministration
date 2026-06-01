@@ -1,6 +1,7 @@
-modules = ["nodejs-20"]
+modules = ["nodejs-20", "web"]
 [agent]
 expertMode = true
+stack = "FULLSTACK_JS"
 
 [workflows]
 runButton = "Project"
@@ -18,13 +19,13 @@ args = "Start App"
 name = "Start App"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev & npx vite --config vite.config.ts"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
 
 [[ports]]
 localPort = 3001
@@ -33,4 +34,11 @@ externalPort = 3001
 [[ports]]
 localPort = 5000
 externalPort = 80
-exposeLocalhost = true
+
+[nix]
+channel = "stable-25_05"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["node", "./dist/index.cjs"]
+build = ["npm", "run", "build"]
