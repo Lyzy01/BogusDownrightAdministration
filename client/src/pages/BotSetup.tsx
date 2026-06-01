@@ -228,12 +228,33 @@ export default function BotSetup() {
           <div className="flex items-center gap-2 mb-2">
             <Radio size={16} className="text-discord-fuchsia" />
             <h2 className="font-bold text-white">Gateway Intents</h2>
-            <div className="ml-auto flex items-center gap-1 text-xs text-discord-light/50">
-              <Info size={11} />
-              Privileged intents require approval in Developer Portal
-            </div>
           </div>
           <p className="text-discord-light text-sm mb-4">Select which Discord events your bot will receive</p>
+
+          {selectedIntents.some((i) => ["GuildMembers", "GuildPresences", "MessageContent"].includes(i)) && (
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-discord-yellow/8 border border-discord-yellow/25 mb-4">
+              <Info size={15} className="text-discord-yellow shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-discord-yellow text-sm font-semibold mb-1">Privileged intents enabled</p>
+                <p className="text-discord-yellow/70 text-xs mb-2">
+                  You must also enable these in the Discord Developer Portal, or your bot will fail to start.
+                </p>
+                {bot?.bot_id && (
+                  <a
+                    href={`https://discord.com/developers/applications/${bot.bot_id}/bot`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-discord-yellow/15 hover:bg-discord-yellow/25 text-discord-yellow text-xs font-bold transition-all"
+                    data-testid="link-discord-dev-portal"
+                  >
+                    <ExternalLink size={11} />
+                    Open Discord Dev Portal for this bot
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {ALL_INTENTS.map((intent) => (
               <label key={intent.name} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${

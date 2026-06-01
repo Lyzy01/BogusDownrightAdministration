@@ -56,7 +56,7 @@ export async function startBot(botDbId: string): Promise<{ success: boolean; err
   }
 
   const bot = result.rows[0];
-  const intentNames: string[] = bot.intents || ["Guilds", "GuildMessages", "MessageContent"];
+  const intentNames: string[] = bot.intents || ["Guilds", "GuildMessages"];
 
   const intentBits = intentNames
     .filter((name) => AVAILABLE_INTENTS[name])

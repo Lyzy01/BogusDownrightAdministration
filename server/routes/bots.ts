@@ -38,7 +38,7 @@ router.post("/", async (req: Request, res: Response) => {
     });
 
     const id = uuidv4();
-    const defaultIntents = ["Guilds", "GuildMessages", "MessageContent"];
+    const defaultIntents = ["Guilds", "GuildMessages"];
     const defaultModules = ["fun", "utility", "moderation", "welcome", "logging", "automod"];
 
     await query(
