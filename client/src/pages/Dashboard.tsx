@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -26,6 +26,7 @@ export default function Dashboard() {
   const [showAddBot, setShowAddBot] = useState(false);
   const [addError, setAddError] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [botErrors, setBotErrors] = useState<Record<string, string>>({});
 
   const { data: bots, isLoading: botsLoading } = useQuery<BotData[]>({
     queryKey: ["bots"],
@@ -70,9 +71,18 @@ export default function Dashboard() {
         const err = await res.json();
         throw new Error(err.error || "Failed");
       }
-      return res.json();
+      return { ...await res.json(), botId: id, action };
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bots"] }),
+    onSuccess: (data) => {
+      setBotErrors((prev) => { const n = { ...prev }; delete n[data.botId]; return n; });
+      queryClient.invalidateQueries({ queryKey: ["bots"] });
+    },
+    onError: (e: Error, vars) => {
+      if (vars.action === "start") {
+        setBotErrors((prev) => ({ ...prev, [vars.id]: e.message }));
+      }
+      queryClient.invalidateQueries({ queryKey: ["bots"] });
+    },
   });
 
   const deleteBotMutation = useMutation({
@@ -96,10 +106,13 @@ export default function Dashboard() {
     );
   }
 
-  if (!user) {
-    setLocation("/");
-    return null;
-  }
+  useEffect(() => {
+    if (!userLoading && !user) {
+      setLocation("/");
+    }
+  }, [user, userLoading, setLocation]);
+
+  if (!userLoading && !user) return null;
 
   async function copyInvite(botId: string) {
     const res = await fetch(`/api/bots/${botId}/invite`, { credentials: "include" });
@@ -265,6 +278,12 @@ export default function Dashboard() {
                         <span className="text-discord-light/30">·</span>
                         <span className="text-xs text-discord-light font-mono">prefix: {bot.prefix || "!"}</span>
                       </div>
+                      {botErrors[bot.id] && (
+                        <div className="flex items-start gap-1.5 mt-2 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+                          <AlertCircle size={12} className="text-red-400 mt-0.5 shrink-0" />
+                          <span className="text-xs text-red-400">{botErrors[bot.id]}</span>
+                        </div>
+                      )}
                     </div>
 
                     <button
