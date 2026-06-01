@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import {
   Bot, Save, ExternalLink, Copy, Check, Terminal, Puzzle, ChevronRight,
-  Info, Shield, Zap, Radio, Server, MessageSquare, ScrollText
+  Info, Shield, Zap, Radio, Server, MessageSquare, ScrollText,
+  BookOpen, ChevronDown, CircleCheck
 } from "lucide-react";
 import Layout from "../components/Layout";
 import { useCurrentUser } from "../App";
@@ -62,6 +63,7 @@ export default function BotSetup() {
   const [saved, setSaved] = useState(false);
   const [inviteUrl, setInviteUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(true);
 
   const { data: bot, isLoading } = useQuery<BotData>({
     queryKey: ["bot", id],
@@ -176,6 +178,102 @@ export default function BotSetup() {
             </div>
           </div>
         </div>
+
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl border border-discord-blurple/20 mb-6 overflow-hidden">
+          <button
+            onClick={() => setGuideOpen((v) => !v)}
+            className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/3 transition-colors text-left"
+            data-testid="button-toggle-guide"
+          >
+            <div className="w-7 h-7 rounded-lg bg-discord-blurple/20 flex items-center justify-center shrink-0">
+              <BookOpen size={14} className="text-discord-blurple" />
+            </div>
+            <div className="flex-1">
+              <span className="font-bold text-white text-sm">Setup Guide</span>
+              <span className="text-discord-light/50 text-xs ml-2">How to get your bot online in 4 steps</span>
+            </div>
+            <ChevronDown size={16} className={`text-discord-light/50 transition-transform duration-200 ${guideOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          <AnimatePresence initial={false}>
+            {guideOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="px-6 pb-6 border-t border-white/5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    {[
+                      {
+                        step: 1,
+                        title: "Open Discord Developer Portal",
+                        desc: "Go to discord.com/developers/applications and open your bot's application.",
+                        action: bot?.bot_id ? { label: "Open my bot", href: `https://discord.com/developers/applications/${bot.bot_id}/bot` } : { label: "Open portal", href: "https://discord.com/developers/applications" },
+                        color: "discord-blurple",
+                      },
+                      {
+                        step: 2,
+                        title: 'Click "Bot" in the sidebar',
+                        desc: 'In the left menu of your application, click "Bot" to access bot settings.',
+                        color: "discord-fuchsia",
+                      },
+                      {
+                        step: 3,
+                        title: "Enable Privileged Intents",
+                        desc: 'Scroll to "Privileged Gateway Intents" and turn on: Presence Intent, Server Members Intent, and Message Content Intent.',
+                        highlight: ["Presence Intent", "Server Members Intent", "Message Content Intent"],
+                        color: "discord-yellow",
+                      },
+                      {
+                        step: 4,
+                        title: 'Click "Save Changes" on Discord',
+                        desc: 'Hit "Save Changes" on the Discord page, then come back here and click Start on your dashboard.',
+                        color: "discord-green",
+                      },
+                    ].map(({ step, title, desc, action, highlight, color }) => (
+                      <div key={step} className="flex gap-3 p-4 rounded-xl bg-white/3 border border-white/5">
+                        <div className={`w-7 h-7 rounded-full bg-${color}/20 border border-${color}/30 flex items-center justify-center shrink-0 mt-0.5`}>
+                          <span className={`text-xs font-black text-${color}`}>{step}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm font-semibold mb-1">{title}</p>
+                          <p className="text-discord-light/60 text-xs leading-relaxed mb-2">{desc}</p>
+                          {highlight && (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {highlight.map((h) => (
+                                <span key={h} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-discord-yellow/10 border border-discord-yellow/20 text-discord-yellow font-medium">
+                                  <CircleCheck size={10} /> {h}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {action && (
+                            <a
+                              href={action.href}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-discord-blurple hover:underline"
+                              data-testid={`link-guide-step-${step}`}
+                            >
+                              <ExternalLink size={10} /> {action.label}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-discord-light/30 text-xs mt-4 text-center">
+                    Only needed once per bot — you do not need to repeat this unless you change bots.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-6 border border-white/5">
